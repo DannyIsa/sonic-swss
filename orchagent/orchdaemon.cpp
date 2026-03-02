@@ -832,6 +832,8 @@ bool OrchDaemon::init()
     TwampOrch *twamp_orch = new TwampOrch(confDbTwampTable, stateDbTwampTable, gSwitchOrch, gPortsOrch, vrf_orch);
     m_orchList.push_back(twamp_orch);
 
+    m_orchList.push_back(new ErrorMonitorOrch(m_configDb, CFG_PORT_TX_ERROR_TABLE_NAME));
+
     if (HFTelOrch::isSupportedHFTel(gSwitchId))
     {
         const vector<string> stel_tables = {
