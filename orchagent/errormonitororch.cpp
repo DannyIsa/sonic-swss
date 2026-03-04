@@ -19,7 +19,7 @@ ErrorMonitorOrch::ErrorMonitorOrch(
         getConfigValues();
         validatePollTime();
         initiatePortErrorCounterTable();
-    } catch (const std::exception e) {
+    } catch (...) {
         handleError();
     }
     
