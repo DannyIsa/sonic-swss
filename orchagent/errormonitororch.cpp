@@ -294,7 +294,7 @@ void ErrorMonitorOrch::logThresholdExceededPorts(const std::vector<PortStats>& p
     for (const PortStats& portStat : portsStatuses)
     {
         if (portStat.exceededThreshold)
-            SWSS_LOG_CRIT("Port %s exceeded TX error threshold: %" PRIu64 " errors in last cycle",
+            SWSS_LOG_WARN("Port %s exceeded TX error threshold: %" PRIu64 " errors in last cycle",
                 portStat.iface.c_str(),
                 portStat.numOfErrors);
     }
