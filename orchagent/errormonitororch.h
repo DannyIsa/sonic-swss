@@ -3,8 +3,6 @@
 
 #include "orch.h"
 #include "timer.h"
-#include "portsorch.h"
-#include "sai_serialize.h"
 #include "logger.h"
 #include "port.h"
 #include <cstdint>
@@ -14,8 +12,10 @@
 #include <string>
 #include <memory>
 
+class PortsOrch;
+
 #define DEFAULT_ERR_THRESHOLD 100
-#define DEFAULT_POLL_INTERVAL 30
+#define DEFAULT_POLL_INTERVAL 30 // seconds
 
 #define THRESHOLD_KEY            "threshold"
 #define POLLING_INTERVAL_KEY     "polling_interval"
@@ -23,10 +23,6 @@
 #define ERR_COUNT_KEY            "tx_err_count"
 #define TOTAL_ERR_COUNT_KEY      "total_tx_err_count"
 #define COUNTERS_PORT_TX_ERR_KEY "SAI_PORT_STAT_IF_OUT_ERRORS"
-
-extern "C" {
-    #include "sai.h"
-}
 
 extern PortsOrch *gPortsOrch;
 

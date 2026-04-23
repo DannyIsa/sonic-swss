@@ -1,7 +1,6 @@
 #include "errormonitororch.h"
-#include <exception>
-#include <stdexcept>
-#include <string>
+#include "portsorch.h"
+#include "sai_serialize.h"
 
 ErrorMonitorOrch::ErrorMonitorOrch(
     DBConnector *configDB,
@@ -38,8 +37,7 @@ void ErrorMonitorOrch::doTask(Consumer &consumer)
     } catch (...) {
         handleError();
     }
-    
-    resetPollingTimer();
+
     consumer.m_toSync.clear();
 }
 
@@ -54,7 +52,7 @@ void ErrorMonitorOrch::doTask(SelectableTimer &timer)
     }
 }
 
-void ErrorMonitorOrch::handleError(std::exception_ptr eptr)
+void ErrorMonitorOrch::handleError()
 {
     SWSS_LOG_ENTER();
 
@@ -91,9 +89,13 @@ void ErrorMonitorOrch::getConfigValues()
 
     if (m_txErrConfigsTable->hget("GLOBAL", THRESHOLD_KEY, thresholdStr))
         m_threshold = strToUintOrError(thresholdStr);
+    else
+        m_txErrConfigsTable->hset("GLOBAL", THRESHOLD_KEY, std::to_string(DEFAULT_ERR_THRESHOLD));
 
     if (m_txErrConfigsTable->hget("GLOBAL", POLLING_INTERVAL_KEY, pollingIntervalStr))
         m_pollingInterval = strToUintOrError(pollingIntervalStr);
+    else
+        m_txErrConfigsTable->hset("GLOBAL", POLLING_INTERVAL_KEY, std::to_string(DEFAULT_POLL_INTERVAL));
 }
 
 void ErrorMonitorOrch::validatePollTime()
@@ -122,6 +124,8 @@ void ErrorMonitorOrch::startPollingTimer()
 
 void ErrorMonitorOrch::getConfigValuesFromConsumer(Consumer &consumer)
 {
+    const uint64_t previousPollingInterval = m_pollingInterval;
+
     auto it = consumer.m_toSync.begin();
     while (it != consumer.m_toSync.end())
     {
@@ -136,6 +140,8 @@ void ErrorMonitorOrch::getConfigValuesFromConsumer(Consumer &consumer)
 
                 if (fieldName == THRESHOLD_KEY) m_threshold = strToUintOrError(fieldValue);
                 else if (fieldName == POLLING_INTERVAL_KEY) m_pollingInterval = strToUintOrError(fieldValue);
+                else SWSS_LOG_WARN("Ignoring unknown error monitor config field '%s' (value '%s')",
+                                   fieldName.c_str(), fieldValue.c_str());
             }
         } else if (operation == DEL_COMMAND) {
             throw DeleteFromConfigurationTableException("Invalid case resetting to default config");
@@ -144,6 +150,10 @@ void ErrorMonitorOrch::getConfigValuesFromConsumer(Consumer &consumer)
         it++;
     }
 
+    if (m_pollingInterval != previousPollingInterval)
+    {
+        resetPollingTimer();
+    }
 }
 
 void ErrorMonitorOrch::resetPollingTimer()
@@ -169,8 +179,13 @@ void ErrorMonitorOrch::revertThresholdConfig()
 
 void ErrorMonitorOrch::revertPollingConfig()
 {
+    const uint64_t previousPollingInterval = m_pollingInterval;
     m_pollingInterval = DEFAULT_POLL_INTERVAL;
     m_txErrConfigsTable->hset("GLOBAL", POLLING_INTERVAL_KEY, std::to_string(DEFAULT_POLL_INTERVAL));
+    if (m_pollingInterval != previousPollingInterval)
+    {
+        resetPollingTimer();
+    }
 }
 
 std::vector<PortStats> ErrorMonitorOrch::initialPortsStats(const std::map<std::string, swss::Port> &portMap)
